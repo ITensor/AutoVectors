@@ -1,4 +1,7 @@
 name = "AutoVectors"
+repo = "https://github.com/ITensor/AutoVectors"
+uuid = "ebec67b4-9774-11e9-1de1-3558618bc33b"
+version = "0.0.0"
 
 [deps]
 DSP = "717857b8-e6f2-59f4-9121-6e50c889abd2"
