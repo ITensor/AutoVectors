@@ -1,4 +1,5 @@
 name = "AutoVectors"
+uuid = "f46e80d6-9777-11e9-0a21-77ff17904ca8"
 repo = "https://github.com/ITensor/AutoVectors"
 version = "0.0.0"
 
