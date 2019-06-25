@@ -1,8 +1,8 @@
 
-mutable struct AutoVector{T}  			#   <: AbstractVector{T}   doesn't work
+mutable struct AutoVector{T}        #   <: AbstractVector{T}   doesn't work
   mini::Int64
   maxi::Int64
-  miniloc::Int64		# the location/index of mini-1 in dat
+  miniloc::Int64    # the location/index of mini-1 in dat
   def::T
   #dat::AbstractVector{T}
   dat::Vector{T}
@@ -65,68 +65,68 @@ avlocmax(v::AutoVector) = v.maxi-v.mini+v.miniloc+1
 avvec(v::AutoVector) = v.dat[avlocmin(v):avlocmax(v)]
 
 function getindex(v::AutoVector,i::Integer)
-	if length(v.dat) == 0 || i < v.mini || i > v.maxi 
-		return v.def
-	end
-	v.dat[avlocation(v,i)]
+  if length(v.dat) == 0 || i < v.mini || i > v.maxi 
+    return v.def
+  end
+  v.dat[avlocation(v,i)]
 #       v.dat[i-v.mini+v.miniloc+1]
 end
 
 function fast(v::AutoVector,i)
-	v.dat[i-v.mini+v.miniloc+1]
+  v.dat[i-v.mini+v.miniloc+1]
 end
 
 function clear!(v::AutoVector{T}) where {T}
-	v.mini = 1
-	v.maxi = 0
-	v.miniloc = 0
-	v.dat = T[deepcopy(v.def) for j=1:v.maxi-v.mini+1]
+  v.mini = 1
+  v.maxi = 0
+  v.miniloc = 0
+  v.dat = T[deepcopy(v.def) for j=1:v.maxi-v.mini+1]
 end
 
 function setindex!(v::AutoVector{T},x,i::Integer) where {T}
-	if(length(v.dat) == 0)
-		v.dat = T[deepcopy(v.def) for j=1:19]
-		v.miniloc = 10
-		v.mini = v.maxi = i
-	elseif(i < v.mini || i > v.maxi)
-		newmini = min(i,v.mini)
-		newmaxi = max(i,v.maxi)
-		j = i - v.mini + v.miniloc
-		if j >= 0 && j < length(v.dat)
-			v.miniloc += newmini - v.mini;
-		else
-			newlen = (newmaxi-newmini+20)*2
-			newminiloc=div(newlen-(newmaxi-newmini+1),2)
-			newdat = T[deepcopy(v.def) for j=1:newlen]
-			oldbegin = v.miniloc
-			oldend = v.miniloc+v.maxi-v.mini
-			newbegin = newminiloc - newmini + v.mini
-			for k = oldbegin:oldend
-				newdat[newbegin+k-oldbegin+1] = v.dat[k+1]
-			end
-			v.dat = newdat
-			v.miniloc = newminiloc
-		end
-		v.mini = newmini
-		v.maxi = newmaxi
-	end
-	v.dat[i-v.mini+v.miniloc+1] = x
+  if(length(v.dat) == 0)
+    v.dat = T[deepcopy(v.def) for j=1:19]
+    v.miniloc = 10
+    v.mini = v.maxi = i
+  elseif(i < v.mini || i > v.maxi)
+    newmini = min(i,v.mini)
+    newmaxi = max(i,v.maxi)
+    j = i - v.mini + v.miniloc
+    if j >= 0 && j < length(v.dat)
+      v.miniloc += newmini - v.mini;
+    else
+      newlen = (newmaxi-newmini+20)*2
+      newminiloc=div(newlen-(newmaxi-newmini+1),2)
+      newdat = T[deepcopy(v.def) for j=1:newlen]
+      oldbegin = v.miniloc
+      oldend = v.miniloc+v.maxi-v.mini
+      newbegin = newminiloc - newmini + v.mini
+      for k = oldbegin:oldend
+        newdat[newbegin+k-oldbegin+1] = v.dat[k+1]
+      end
+      v.dat = newdat
+      v.miniloc = newminiloc
+    end
+    v.mini = newmini
+    v.maxi = newmaxi
+  end
+  v.dat[i-v.mini+v.miniloc+1] = x
 end
 
 import Base.copy
 function copy(x::AutoVector)
-    deepcopy(x)
+  deepcopy(x)
 end
 
 import Base.+,Base.-
 function +(v::AutoVector,w::AutoVector)
-    AutoVector(i->v[i]+w[i],min(v.mini,w.mini),max(v.maxi,w.maxi))
+  AutoVector(i->v[i]+w[i],min(v.mini,w.mini),max(v.maxi,w.maxi))
 end
 function -(v::AutoVector,w::AutoVector)
-    AutoVector(i->v[i]-w[i],min(v.mini,w.mini),max(v.maxi,w.maxi))
+  AutoVector(i->v[i]-w[i],min(v.mini,w.mini),max(v.maxi,w.maxi))
 end
 function +(v::AutoVector,w::Float64)
-    AutoVector(i->v[i] .+ w,v.mini,v.maxi)
+  AutoVector(i->v[i] .+ w,v.mini,v.maxi)
 end
 function -(v::AutoVector,w::Float64)
     AutoVector(i->v[i] .- w,v.mini,v.maxi)
@@ -174,68 +174,68 @@ function broadcast(::typeof(*),x::AutoVector,y::AutoVector)
 end
 
 function avdot(x::AutoVector,y::AutoVector)
-    a = max(mini(x),mini(y))
-    b = min(maxi(x),maxi(y))
-    a > b && return 0.0
+  a = max(mini(x),mini(y))
+  b = min(maxi(x),maxi(y))
+  a > b && return 0.0
 
-    xoff = -x.mini + x.miniloc + 1
-    yoff = -y.mini + y.miniloc + 1
-    xa = a +xoff
-    #@views rf = LinearAlgebra.dot(x.dat[a+xoff:b+xoff],y.dat[a+yoff:b+yoff])
-    @views rf = dot(x.dat[a+xoff:b+xoff],y.dat[a+yoff:b+yoff])
-#=
-    res = 0.0
-    for j = max(mini(x),mini(y)):min(maxi(x),maxi(y))
-@inbounds	res += fast(x,j) * fast(y,j)
-    end
-    if abs(rf-res) > 1.0e-10
-	@show (rf,res)
-    end
-=#
-    rf
+  xoff = -x.mini + x.miniloc + 1
+  yoff = -y.mini + y.miniloc + 1
+  xa = a +xoff
+  #@views rf = LinearAlgebra.dot(x.dat[a+xoff:b+xoff],y.dat[a+yoff:b+yoff])
+  @views rf = dot(x.dat[a+xoff:b+xoff],y.dat[a+yoff:b+yoff])
+  #=
+  res = 0.0
+  for j = max(mini(x),mini(y)):min(maxi(x),maxi(y))
+    @inbounds res += fast(x,j) * fast(y,j)
+  end
+  if abs(rf-res) > 1.0e-10
+    @show (rf,res)
+  end
+  =#
+  rf
 end
 
 function avtriple(x::AutoVector,y::AutoVector,z::AutoVector)
-    res = 0.0
-    for j = max(mini(x),mini(y),mini(z)):min(maxi(x),maxi(y),maxi(z))
-@inbounds	res += fast(x,j) * fast(y,j) * fast(z,j)
-    end
-    res
+  res = 0.0
+  for j = max(mini(x),mini(y),mini(z)):min(maxi(x),maxi(y),maxi(z))
+    @inbounds res += fast(x,j) * fast(y,j) * fast(z,j)
+  end
+  res
 end
 
 function doprint(v::AutoVector; spacing = 1)
-    for i=mini(v):maxi(v)
-        println(i*spacing," ",v[i])
-    end
+  for i=mini(v):maxi(v)
+    println(i*spacing," ",v[i])
+  end
 end
 function doprint(FI,v::AutoVector; spacing = 1)
-    for i=mini(v):maxi(v)
-        println(FI,i*spacing," ",v[i])
-    end
+  for i=mini(v):maxi(v)
+    println(FI,i*spacing," ",v[i])
+  end
 end
 
 import LinearAlgebra.axpy!
-function axpy!(y::AutoVector,a::Float64,x::AutoVector)	# y += a * x
-    for k = mini(x):maxi(x)
-	y[k] += a * x[k]
-    end
+function axpy!(y::AutoVector,a::Float64,x::AutoVector)  # y += a * x
+  for k = mini(x):maxi(x)
+    y[k] += a * x[k]
+  end
 end
 
-function axpy!(y::AutoVector,a::Float64,x::AutoVector, cutoff::Float64)	# y += a * x
-    for k = mini(x):maxi(x)
-	r = a * x[k]
-	abs(r) > cutoff && (y[k] += a * x[k])
-    end
+function axpy!(y::AutoVector,a::Float64,x::AutoVector, cutoff::Float64) # y += a * x
+  for k = mini(x):maxi(x)
+    r = a * x[k]
+    abs(r) > cutoff && (y[k] += a * x[k])
+  end
 end
 
 function dotrip(ud,gd,vd,ua,ub,ga,va,gb,vb,uoff,goff,voff)
-    res = 0.0
-		    #j+k >= va  so k >= va - j
-		    #j+k <= vb  so k <= vb - j
-    for j = ua:ub, k = max(ga,va-j):min(gb,vb-j)
-	@inbounds res += ud[j-uoff] * gd[k-goff] * vd[j+k-voff]
-    end
-    res
+  res = 0.0
+  #j+k >= va  so k >= va - j
+  #j+k <= vb  so k <= vb - j
+  for j = ua:ub, k = max(ga,va-j):min(gb,vb-j)
+    @inbounds res += ud[j-uoff] * gd[k-goff] * vd[j+k-voff]
+  end
+  res
 end
 
 #  Same as avdot(convolve(u,g),v)
@@ -266,31 +266,30 @@ function convolvecheck(x::Vector{Float64},y::Vector{Float64})
   my = length(y)
   res = zeros(Float64,mx+my-1)
   for j = 1:mx
-    @inbounds	for k = 1:my
-	    res[j+k-1] += x[j] * y[k]
-	  end
+    @inbounds for k = 1:my
+      res[j+k-1] += x[j] * y[k]
+    end
   end
   res
 end
 
 function myconv(u::Vector{Float64},v::Vector{Float64})
-    m,n = length(u),length(v)
-    if m < n
-        return myconv(v,u)
-    end
-    if n > 40
-        return conv(u,v)
-    end
-    s = m+n-1
-    res = zeros(s)
-    for i=1:m
-        @inbounds res[i:i+n-1] += u[i] * v
-    end
-
-    res
+  m,n = length(u),length(v)
+  if m < n
+    return myconv(v,u)
+  end
+  if n > 40
+    return conv(u,v)
+  end
+  s = m+n-1
+  res = zeros(s)
+  for i=1:m
+    @inbounds res[i:i+n-1] += u[i] * v
+  end
+  res
 end
 
-function convolve(x::AutoVector,y::AutoVector,cut=1.0e-14)		# use absolute cutoff
+function convolve(x::AutoVector,y::AutoVector,cut=1.0e-14)    # use absolute cutoff
   res = AutoVector(x.def)
   #println(maxi(x)-mini(x),"  ",maxi(y)-mini(y))
   if typeof(x.def) == Float64
@@ -304,9 +303,9 @@ function convolve(x::AutoVector,y::AutoVector,cut=1.0e-14)		# use absolute cutof
     my-miy < 0 && return res
     #yy = Float64[fast(y,i+miy-1) for i=1:my-miy+1]
     yy = avvec(y)
-    #	@time vres2 = convolvecheck(xx,yy)
+    # @time vres2 = convolvecheck(xx,yy)
     vres = myconv(xx,yy)
-    #	@show vecnorm(vres-vres2)
+    # @show vecnorm(vres-vres2)
     mir = mix+miy
     minj = 1
     for j = 1:length(vres)
@@ -330,100 +329,101 @@ function convolve(x::AutoVector,y::AutoVector,cut=1.0e-14)		# use absolute cutof
   res
 end
 
-function makeautotake(v::Vector{Float64},offset::Integer)		# take v as the data; very fast
-    AutoVector(0.0,1-offset,length(v)-offset,0,v)
+function makeautotake(v::Vector{Float64},offset::Integer)   # take v as the data; very fast
+  AutoVector(0.0,1-offset,length(v)-offset,0,v)
 end
 
 function makeauto(v::Vector{Float64},offset::Integer)
-    res = AutoVector(0.0)
-    for i=1:length(v)
-	res[i-offset] = v[i]
-    end
-    res
+  res = AutoVector(0.0)
+  for i=1:length(v)
+    res[i-offset] = v[i]
+  end
+  res
 end
 function makeauto(v::Vector{Float64},offset::Integer,cutoff::Float64)
-    res = AutoVector(0.0)
-    for i=1:length(v)
-	vi = v[i]
-	abs(vi) > cutoff && ( res[i-offset] = v[i] )
-    end
-    res
+  res = AutoVector(0.0)
+  for i=1:length(v)
+    vi = v[i]
+    abs(vi) > cutoff && ( res[i-offset] = v[i] )
+  end
+  res
 end
 
 avnorm(x::AutoVector) = vecnorm(x.dat)
 
 # This does not make a new dat array
 function applyshift(x::AutoVector,offset::Integer)
-    AutoVector(x.def,x.mini+offset,x.maxi+offset,x.miniloc,x.dat)
+  AutoVector(x.def,x.mini+offset,x.maxi+offset,x.miniloc,x.dat)
 end
 
 function symmetrize!(m::Array{Float64,2})
-    n = size(m,1)
-    for i=1:n
-	for j=i:n
-	    m[i,j] = m[j,i] = 0.5 * (m[i,j]+m[j,i])
-	end
-    end
+  n = size(m,1)
+  for i=1:n, j=i:n
+    m[i,j] = m[j,i] = 0.5 * (m[i,j]+m[j,i])
+  end
 end
 
 function domin(xd,st,ma,cut)
-    @inbounds for i=st:ma
-	if(abs(xd[i]) > cut)
-	    return i
-	end
+  @inbounds for i=st:ma
+    if(abs(xd[i]) > cut)
+      return i
     end
-    return length(xd)+1
+  end
+  return length(xd)+1
 end
 function domax(xd,st,ma,cut)
-    @inbounds for i=ma:-1:st
-	if(abs(xd[i]) > cut)
-	    return i
-	end
+  @inbounds for i=ma:-1:st
+    if(abs(xd[i]) > cut)
+      return i
     end
-    return 0
+  end
+  return 0
 end
 
 function shrink!(x::AutoVector,cut)
-    ami,ama = avlocmin(x),avlocmax(x)
-    mi = domin(x.dat,ami,ama,cut)
-    newmin = mini(x)+mi-ami
-    if newmin > maxi(x) 
-	clear!(x)
-	return
-    end
-    ma = domax(x.dat,ami,ama,cut)
-    x.maxi = maxi(x) + ma - ama 
-    x.miniloc += newmin - x.mini
-    x.mini = newmin
+  ami,ama = avlocmin(x),avlocmax(x)
+  mi = domin(x.dat,ami,ama,cut)
+  newmin = mini(x)+mi-ami
+  if newmin > maxi(x) 
+    clear!(x)
+    return
+  end
+  ma = domax(x.dat,ami,ama,cut)
+  x.maxi = maxi(x) + ma - ama 
+  x.miniloc += newmin - x.mini
+  x.mini = newmin
+  return
 end
+
 function shrinkold!(x::AutoVector,cut)
   newmin = maxi(x)+1
   for i=arange(x)
     if(abs(fast(x,i)) > cut)
-	    newmin = i
-	    break
+      newmin = i
+      break
     end
   end
   if newmin == maxi(x)+1 
-	  clear!(x)
-	  return
+    clear!(x)
+    return
   end
   newmax = newmin-1
   for i=maxi(x):-1:newmin
-	  if(abs(fast(x,i)) > cut)
-	    newmax = i
-	    break
+    if(abs(fast(x,i)) > cut)
+      newmax = i
+      break
     end
   end
   x.maxi = newmax
   x.miniloc += newmin - x.mini
   x.mini = newmin
+  return
 end
 
 function eigsym(Marg)
   M = copy(Marg)
   symmetrize!(M)
   F = eigen(M)
-  F.values,F.vectors
+  return F.values,F.vectors
 end
 
